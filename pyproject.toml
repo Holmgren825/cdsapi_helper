@@ -1,0 +1,29 @@
+
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cdsapi_help"
+version = "0.0.1"
+requires-python = ">=3.10"
+dependencies = [
+  "cdsapi",
+  "click"
+]
+[project.scripts]
+download_era5 = "cdsapi_help.cli:download_era5"
+
+[tool.ruff]
+# Enable flake8-bugbear (`B`) rules.
+select = ["E", "F", "B", "W", "N", "ANN", "D", "C90"]
+
+# Never enforce `E501` (line length violations).
+ignore = ["E501"]
+
+# Avoid trying to fix flake8-bugbear (`B`) violations.
+# unfixable = ["B"]
+
+[tool.ruff.per-file-ignores]
+"__init__.py" = ["E402", "F401"]
+"**/{tests,docs,tools}/*" = ["E402"]

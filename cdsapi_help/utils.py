@@ -1,4 +1,5 @@
-from datetime import datetime
+import hashlib
+from typing import Union, Dict, List
 
 import pandas as pd
 
@@ -77,15 +78,29 @@ def build_request(
     return request
 
 
-def request_to_df(request: dict, reply: dict) -> pd.Dataframe:
-    return pd.DataFrame(
-        {
-            "r_id": reply["request_id"],
-            "state": reply["state"],
-            "variable": request["variable"],
-            "year": request["year"],
-            "month": request["month"],
-            "area": "_".join(str(i) for i in request["area"]),
-            "submited": datetime.now().strftime("%Y-%m-%d-%H:%M:%S"),
-        }
-    )
+def request_to_df(request: dict, reply: dict, req_hash: str) -> pd.DataFrame:
+    df = pd.DataFrame([request])
+    df["request_hash"] = req_hash
+    df["request_id"] = reply["request_id"]
+    df["state"] = reply["state"]
+    return df
+
+
+# https://github.com/schollii/sandals/blob/master/json_sem_hash.py
+JsonType = Union[str, int, float, List["JsonType"], "JsonTree"]
+JsonTree = Dict[str, JsonType]
+StrTreeType = Union[str, List["StrTreeType"], "StrTree"]
+StrTree = Dict[str, StrTreeType]
+
+
+def sorted_dict_str(data: JsonType) -> StrTreeType:
+    if type(data) == dict:
+        return {k: sorted_dict_str(data[k]) for k in sorted(data.keys())}
+    elif type(data) == list:
+        return [sorted_dict_str(val) for val in data]
+    else:
+        return str(data)
+
+
+def get_json_sem_hash(data: JsonTree, hasher=hashlib.sha256) -> str:
+    return hasher(bytes(repr(sorted_dict_str(data)), "UTF-8")).hexdigest()

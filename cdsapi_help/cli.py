@@ -1,8 +1,13 @@
 #!/usr/bin/env python
+from copy import deepcopy
+from itertools import product
+
 import cdsapi
 import click
+import tomli
 
 from .utils import build_request
+from .download import send_request
 
 
 @click.command()
@@ -43,3 +48,30 @@ def download_era5(variable: str, year: str, month: str, dry_run: bool) -> None:
         )
     else:
         print(request)
+
+
+@click.command()
+@click.argument("config_path", type=click.Path(exists=True))
+def download_era5_toml(config_path: str) -> None:
+    click.echo(f"Reading specification: {click.format_filename(config_path)}")
+    with open(config_path, mode="rb") as fp:
+        spec = tomli.load(fp)
+
+    dataset = spec["dataset"]
+    request = spec["request"]
+    click.echo(f"Requesting variable: {request['variable']}.")
+
+    to_permutate = [request[var] for var in spec["looping_variables"]]
+    requests = []
+    for perm_spec in product(*to_permutate):
+        perm_spec = {
+            spec["looping_variables"][i]: perm_spec[i]
+            for i in range(len(spec["looping_variables"]))
+        }
+        sub_request = deepcopy(request)
+        for key, value in perm_spec.items():
+            sub_request[key] = value
+        requests.append(sub_request)
+
+    # Send the request
+    send_request(dataset, requests)

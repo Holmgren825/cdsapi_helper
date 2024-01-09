@@ -7,7 +7,7 @@ import click
 import tomli
 
 from .utils import build_request
-from .download import send_request
+from .download import send_request, update_request
 
 
 @click.command()
@@ -75,3 +75,5 @@ def download_era5_toml(config_path: str) -> None:
 
     # Send the request
     send_request(dataset, requests)
+    # Update request
+    update_request()

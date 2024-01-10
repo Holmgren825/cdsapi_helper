@@ -4,16 +4,13 @@ requires = ["setuptools", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "cdsapi_help"
+name = "cdsapi_helper"
 version = "0.0.1"
 requires-python = ">=3.10"
-dependencies = [
-  "cdsapi",
-  "click"
-]
+dependencies = ["cdsapi", "click"]
 [project.scripts]
-download_era5 = "cdsapi_help.cli:download_era5"
-download_era5_toml = "cdsapi_help.cli:download_era5_toml"
+download_era5 = "cdsapi_helper.cli:download_era5"
+download_era5_toml = "cdsapi_helper.cli:download_era5_toml"
 
 [tool.ruff]
 # Enable flake8-bugbear (`B`) rules.

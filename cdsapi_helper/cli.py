@@ -51,10 +51,10 @@ def download_era5(variable: str, year: str, month: str, dry_run: bool) -> None:
 
 
 @click.command()
-@click.argument("config_path", type=click.Path(exists=True))
-def download_era5_toml(config_path: str) -> None:
-    click.echo(f"Reading specification: {click.format_filename(config_path)}")
-    with open(config_path, mode="rb") as fp:
+@click.argument("spec_path", type=click.Path(exists=True))
+def download_cds(spec_path: str) -> None:
+    click.echo(f"Reading specification: {click.format_filename(spec_path)}")
+    with open(spec_path, mode="rb") as fp:
         spec = tomli.load(fp)
 
     dataset = spec["dataset"]

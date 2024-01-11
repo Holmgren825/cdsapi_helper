@@ -10,7 +10,7 @@ requires-python = ">=3.10"
 dependencies = ["cdsapi", "click"]
 [project.scripts]
 download_era5 = "cdsapi_helper.cli:download_era5"
-download_era5_toml = "cdsapi_helper.cli:download_cds"
+download_cds = "cdsapi_helper.cli:download_cds"
 
 [tool.ruff]
 # Enable flake8-bugbear (`B`) rules.

@@ -1,4 +1,5 @@
 import hashlib
+import os
 from typing import Union, Dict, List
 
 import pandas as pd
@@ -86,6 +87,30 @@ def request_to_df(request: dict, reply: dict, req_hash: str) -> pd.DataFrame:
     return df
 
 
+def build_filename(request: dict) -> str:
+    print(request)
+    filetype = ".nc" if request.format == "netcdf" else ".grib"
+    variable = request.variable
+    year = request.year
+    # FIX: This could be better, assumes that we have one month, or one full year.
+    month = str_to_list(request.month)
+    month = month if len(month) == 1 else None
+    day = str_to_list(request.day)
+    day = day if len(day) == 1 else None
+    psls = str_to_list(request.pressure_level)
+    pressure_level = f"psl_{psls[0]}_{psls[-1]}"
+    # FIX: What to do with time?
+    # time =
+    area = str_to_list(request.area)
+    area = "_".join(area)
+    area = "ext_" + area
+
+    filename = f"{variable}-{year}-{month}-{day}-{pressure_level}-{area}{filetype}"
+    filename = os.path.join(os.path.curdir, filename)
+    print(filename)
+    return filename
+
+
 # https://github.com/schollii/sandals/blob/master/json_sem_hash.py
 JsonType = Union[str, int, float, List["JsonType"], "JsonTree"]
 JsonTree = Dict[str, JsonType]
@@ -104,3 +129,7 @@ def sorted_dict_str(data: JsonType) -> StrTreeType:
 
 def get_json_sem_hash(data: JsonTree, hasher=hashlib.sha256) -> str:
     return hasher(bytes(repr(sorted_dict_str(data)), "UTF-8")).hexdigest()
+
+
+def str_to_list(string: str) -> list:
+    return string.strip("[]").replace("'", "").replace(" ", "").split(",")

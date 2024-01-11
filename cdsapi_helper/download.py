@@ -4,10 +4,10 @@ import cdsapi
 import pandas as pd
 from requests.exceptions import HTTPError
 
-from .utils import get_json_sem_hash, request_to_df
+from .utils import get_json_sem_hash, request_to_df, build_filename
 
 
-def send_request(dataset: str, request: Union[dict, list[dict]]) -> None:
+def send_request(dataset: str, request: Union[dict, list[dict]], dry_run: bool) -> None:
     client = cdsapi.Client(wait_until_complete=False, delete=False)
 
     try:
@@ -25,8 +25,12 @@ def send_request(dataset: str, request: Union[dict, list[dict]]) -> None:
         except KeyError:
             duplicate = False
         if not duplicate:
-            result = client.retrieve(dataset, req)
-            r_df = request_to_df(req, result.reply, req_hash)
+            if not dry_run:
+                result = client.retrieve(dataset, req)
+                reply = result.reply
+            else:
+                reply = {"state": "test_state", "request_id": "test_id"}
+            r_df = request_to_df(req, reply, req_hash)
             df = pd.concat([df, r_df])
         else:
             print("Request already sent.")
@@ -36,8 +40,7 @@ def send_request(dataset: str, request: Union[dict, list[dict]]) -> None:
     df.to_csv("./cds_requests.csv")
 
 
-def update_request() -> None:
-    print("hello")
+def update_request(dry_run: bool) -> None:
     client = cdsapi.Client(wait_until_complete=False, delete=False)
     try:
         df = pd.read_csv("./cds_requests.csv", index_col=0)
@@ -46,20 +49,42 @@ def update_request() -> None:
         return
 
     print("Updating requests...")
-    for i, request in df.iterrows():
-        if request.state != "completed":
+    for request in df.itertuples():
+        if request.state != "completed" and request.state != "downloaded":
             try:
-                new_result = cdsapi.api.Result(
-                    client, {"request_id": request.request_id}
-                )
-                new_result.update()
-                df.at[i, "state"] = new_result.reply["state"]
+                if not dry_run:
+                    result = cdsapi.api.Result(
+                        client, {"request_id": request.request_id}
+                    )
+                    result.update()
+                    df.at[request.Index, "state"] = result.reply["state"]
             except HTTPError:
                 print("Request not found")
-                df.at[i, "state"] = "deleted"
+                df.at[request.Index, "state"] = "deleted"
 
     df.to_csv("./cds_requests.csv")
 
 
-def download_requests():
-    df = pd.read_csv("./cds_requests.csv")
+def download_request(dry_run: bool) -> None:
+    try:
+        df = pd.read_csv("./cds_requests.csv")
+    except FileNotFoundError:
+        return
+    client = cdsapi.Client(wait_until_complete=False, delete=False)
+    print("Downloading completed requests...")
+    # TODO: Maybe some downloads could happen in parallel.
+    for request in df.itertuples():
+        if request.state == "completed":
+            try:
+                result = cdsapi.api.Result(client, {"request_id": request.request_id})
+                result.update()
+                filename = build_filename(request)
+                if not dry_run:
+                    result.download(filename)
+                    df.at[request.Index, "state"] = "downloaded"
+            except HTTPError:
+                print("Request not found")
+            proceed = input("Download next file (y/n): ")
+            if proceed != "y":
+                break
+    df.to_csv("./cds_requests.csv")

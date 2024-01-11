@@ -7,7 +7,7 @@ import click
 import tomli
 
 from .utils import build_request
-from .download import send_request, update_request
+from .download import send_request, update_request, download_request
 
 
 @click.command()
@@ -52,7 +52,15 @@ def download_era5(variable: str, year: str, month: str, dry_run: bool) -> None:
 
 @click.command()
 @click.argument("spec_path", type=click.Path(exists=True))
-def download_cds(spec_path: str) -> None:
+@click.option(
+    "--dry-run",
+    "dry_run",
+    is_flag=True,
+    show_default=True,
+    default=False,
+    help="Dry run, no download.",
+)
+def download_cds(spec_path: str, dry_run: bool = False) -> None:
     click.echo(f"Reading specification: {click.format_filename(spec_path)}")
     with open(spec_path, mode="rb") as fp:
         spec = tomli.load(fp)
@@ -74,6 +82,8 @@ def download_cds(spec_path: str) -> None:
         requests.append(sub_request)
 
     # Send the request
-    send_request(dataset, requests)
-    # Update request
-    update_request()
+    send_request(dataset, requests, dry_run)
+    # # # Update request
+    update_request(dry_run)
+
+    download_request(dry_run)

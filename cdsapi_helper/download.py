@@ -1,10 +1,12 @@
+from functools import partial
+from multiprocessing.pool import ThreadPool
 from typing import Union
 
 import cdsapi
 import pandas as pd
 from requests.exceptions import HTTPError
 
-from .utils import get_json_sem_hash, request_to_df, build_filename
+from .utils import build_filename, get_json_sem_hash, request_to_df
 
 
 def send_request(dataset: str, request: Union[dict, list[dict]], dry_run: bool) -> None:
@@ -65,26 +67,40 @@ def update_request(dry_run: bool) -> None:
     df.to_csv("./cds_requests.csv")
 
 
-def download_request(dry_run: bool) -> None:
+def download_request(n_jobs: int = 5, dry_run: bool = False) -> None:
     try:
         df = pd.read_csv("./cds_requests.csv")
     except FileNotFoundError:
         return
     client = cdsapi.Client(wait_until_complete=False, delete=False)
     print("Downloading completed requests...")
-    # TODO: Maybe some downloads could happen in parallel.
-    for request in df.itertuples():
-        if request.state == "completed":
-            try:
-                result = cdsapi.api.Result(client, {"request_id": request.request_id})
-                result.update()
-                filename = build_filename(request)
-                if not dry_run:
-                    result.download(filename)
-                    df.at[request.Index, "state"] = "downloaded"
-            except HTTPError:
-                print("Request not found")
-            proceed = input("Download next file (y/n): ")
-            if proceed != "y":
-                break
+    # Some parallel downloads.
+    download_helper_p = partial(download_helper, client=client, dry_run=dry_run)
+    with ThreadPool(processes=n_jobs) as p:
+        results = p.map(download_helper_p, df.itertuples())
+
+    # Write new states.
+    df.state = results
+    # Save them.
     df.to_csv("./cds_requests.csv")
+
+
+def download_helper(
+    request: pd.core.frame.pandas, client: cdsapi.Client, dry_run: bool = False
+) -> str:
+    if request.state == "completed":
+        try:
+            result = cdsapi.api.Result(client, {"request_id": request.request_id})
+            result.update()
+            filename = build_filename(request)
+            if not dry_run:
+                result.download(filename)
+                return "downloaded"
+            else:
+                return request.state
+        except HTTPError:
+            print("Request not found")
+            return request.state
+    else:
+        # No change to state.
+        return request.state

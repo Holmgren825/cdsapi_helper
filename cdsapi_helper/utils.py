@@ -1,6 +1,6 @@
 import hashlib
 import os
-from typing import Union, Dict, List
+from typing import Dict, List, Union
 
 import pandas as pd
 

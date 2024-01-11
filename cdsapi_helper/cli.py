@@ -6,8 +6,8 @@ import cdsapi
 import click
 import tomli
 
+from .download import download_request, send_request, update_request
 from .utils import build_request
-from .download import send_request, update_request, download_request
 
 
 @click.command()
@@ -60,7 +60,14 @@ def download_era5(variable: str, year: str, month: str, dry_run: bool) -> None:
     default=False,
     help="Dry run, no download.",
 )
-def download_cds(spec_path: str, dry_run: bool = False) -> None:
+@click.option(
+    "--n-jobs",
+    "n_jobs",
+    show_default=True,
+    default=5,
+    type=click.INT,
+)
+def download_cds(spec_path: str, n_jobs: int = 5, dry_run: bool = False) -> None:
     click.echo(f"Reading specification: {click.format_filename(spec_path)}")
     with open(spec_path, mode="rb") as fp:
         spec = tomli.load(fp)
@@ -86,4 +93,4 @@ def download_cds(spec_path: str, dry_run: bool = False) -> None:
     # # # Update request
     update_request(dry_run)
 
-    download_request(dry_run)
+    download_request(n_jobs=n_jobs, dry_run=dry_run)

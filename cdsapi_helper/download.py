@@ -52,7 +52,11 @@ def update_request(dry_run: bool) -> None:
 
     print("Updating requests...")
     for request in df.itertuples():
-        if request.state != "completed" and request.state != "downloaded":
+        if (
+            request.state != "completed"
+            and request.state != "downloaded"
+            and request.state != "deleted"
+        ):
             try:
                 if not dry_run:
                     result = cdsapi.api.Result(
@@ -61,7 +65,7 @@ def update_request(dry_run: bool) -> None:
                     result.update()
                     df.at[request.Index, "state"] = result.reply["state"]
             except HTTPError:
-                print("Request not found")
+                print(f"Request {request.Index} not found")
                 df.at[request.Index, "state"] = "deleted"
 
     df.to_csv("./cds_requests.csv")
@@ -69,7 +73,7 @@ def update_request(dry_run: bool) -> None:
 
 def download_request(n_jobs: int = 5, dry_run: bool = False) -> None:
     try:
-        df = pd.read_csv("./cds_requests.csv")
+        df = pd.read_csv("./cds_requests.csv", index_col=0)
     except FileNotFoundError:
         return
     client = cdsapi.Client(wait_until_complete=False, delete=False)

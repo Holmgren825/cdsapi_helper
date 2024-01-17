@@ -88,7 +88,6 @@ def request_to_df(request: dict, reply: dict, req_hash: str) -> pd.DataFrame:
 
 
 def build_filename(request: dict) -> str:
-    print(request)
     filetype = ".nc" if request.format == "netcdf" else ".grib"
     variable = request.variable
     year = request.year

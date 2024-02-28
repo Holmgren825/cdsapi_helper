@@ -105,13 +105,13 @@ def download_cds(
     check_request_again = True
     while check_request_again:
         # First we try to download, likely in queue.
-        download_request(n_jobs=n_jobs, dry_run=dry_run)
+        download_request(spec["filename_spec"], n_jobs=n_jobs, dry_run=dry_run)
         # Then we update the request.
         update_request(dry_run)
         # How should we wait?
         if wait:
             try:
-                df = pd.read_csv("./cds_requests.csv", index_col=0)
+                df = pd.read_csv("./cds_requests.csv", index_col=0, dtype=str)
             # This shouldn't happen at this point.
             except FileNotFoundError:
                 print("This shouldn't happen.")

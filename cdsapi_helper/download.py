@@ -13,7 +13,7 @@ def send_request(dataset: str, request: Union[dict, list[dict]], dry_run: bool) 
     client = cdsapi.Client(wait_until_complete=False, delete=False)
 
     try:
-        df = pd.read_csv("./cds_requests.csv", index_col=0)
+        df = pd.read_csv("./cds_requests.csv", index_col=0, dtype=str)
     except FileNotFoundError:
         df = pd.DataFrame()
 
@@ -43,9 +43,9 @@ def send_request(dataset: str, request: Union[dict, list[dict]], dry_run: bool) 
 
 
 def update_request(dry_run: bool) -> None:
-    client = cdsapi.Client(wait_until_complete=False, delete=False)
+    client = cdsapi.Client(timeout=600, wait_until_complete=False, delete=False)
     try:
-        df = pd.read_csv("./cds_requests.csv", index_col=0)
+        df = pd.read_csv("./cds_requests.csv", index_col=0, dtype=str)
     except FileNotFoundError:
         print("Nothing to update.")
         return
@@ -71,15 +71,19 @@ def update_request(dry_run: bool) -> None:
     df.to_csv("./cds_requests.csv")
 
 
-def download_request(n_jobs: int = 5, dry_run: bool = False) -> None:
+def download_request(
+    filename_spec: list, n_jobs: int = 5, dry_run: bool = False
+) -> None:
     try:
-        df = pd.read_csv("./cds_requests.csv", index_col=0)
+        df = pd.read_csv("./cds_requests.csv", index_col=0, dtype=str)
     except FileNotFoundError:
         return
-    client = cdsapi.Client(wait_until_complete=False, delete=False)
+    client = cdsapi.Client(timeout=600, wait_until_complete=False, delete=False)
     print("Downloading completed requests...")
     # Some parallel downloads.
-    download_helper_p = partial(download_helper, client=client, dry_run=dry_run)
+    download_helper_p = partial(
+        download_helper, filename_spec=filename_spec, client=client, dry_run=dry_run
+    )
     with ThreadPool(processes=n_jobs) as p:
         results = p.map(download_helper_p, df.itertuples())
 
@@ -90,13 +94,16 @@ def download_request(n_jobs: int = 5, dry_run: bool = False) -> None:
 
 
 def download_helper(
-    request: pd.core.frame.pandas, client: cdsapi.Client, dry_run: bool = False
+    request: pd.core.frame.pandas,
+    filename_spec,
+    client: cdsapi.Client,
+    dry_run: bool = False,
 ) -> str:
     if request.state == "completed":
         try:
             result = cdsapi.api.Result(client, {"request_id": request.request_id})
             result.update()
-            filename = build_filename(request)
+            filename = build_filename(request, filename_spec)
             if not dry_run:
                 result.download(filename)
                 return "downloaded"

@@ -11,12 +11,13 @@ It also makes sure that requests are not re-submitted on subsequent runs.
 If one or more requests are “completed” the program will download the files.
 By default, it will download 5 files in parallel, but this can be specified by the user by the `--n-jobs` option.
 
-Currently, filenames are based on the parameters of the request.
+Filenames are based on the parameters of the request, see `filename_spec` in the specification below.
 
 **Example request specification:**
 ```toml
 dataset = "reanalysis-era5-pressure-levels"
 looping_variables = ["variable", "year"]
+filename_spec = ["variable", "year", "time"]
 
 [request]
 product_type = "reanalysis"

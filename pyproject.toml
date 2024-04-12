@@ -6,8 +6,8 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "cdsapi_helper"
 version = "0.0.1"
-requires-python = ">=3.10"
-dependencies = ["cdsapi", "click", "pandas"]
+requires-python = ">=3.11"
+dependencies = ["cdsapi", "click", "pandas", "tomli"]
 [project.scripts]
 download_era5 = "cdsapi_helper.cli:download_era5"
 download_cds = "cdsapi_helper.cli:download_cds"

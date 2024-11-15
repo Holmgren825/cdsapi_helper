@@ -88,7 +88,7 @@ def request_to_df(request: dict, reply: dict, req_hash: str) -> pd.DataFrame:
 
 
 def build_filename(request: dict, filename_spec: list) -> str:
-    filetype = ".nc" if request.format == "netcdf" else ".grib"
+    filetype = ".nc" if request.data_format == "netcdf" else ".grib"
     filename_parts = []
     for var in filename_spec:
         part = str_to_list(getattr(request, var))

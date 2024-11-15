@@ -120,8 +120,13 @@ def download_cds(
                 # Should go back up to download_request.
                 continue
             # Everything is in the queue.
-            elif (df.state == "queued").any():
+            elif (
+                (df.state == "queued").any()
+                or (df.state == "running").any()
+                or (df.state == "accepted").any()
+            ):
                 # Wait 30 minutes before checking the status again.
+                click.echo("Requests are running, waiting 30 min.")
                 sleep(60 * 30)
             else:
                 check_request_again = False

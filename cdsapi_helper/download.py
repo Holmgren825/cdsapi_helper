@@ -59,13 +59,12 @@ def update_request(dry_run: bool) -> None:
         ):
             try:
                 if not dry_run:
-                    result = cdsapi.api.Result(
-                        client, {"request_id": request.request_id}
-                    )
+                    result = client.client.get_remote(request.request_id)
                     result.update()
                     df.at[request.Index, "state"] = result.reply["state"]
-            except HTTPError:
+            except HTTPError as err:
                 print(f"Request {request.Index} not found")
+                print(err)
                 df.at[request.Index, "state"] = "deleted"
 
     df.to_csv("./cds_requests.csv")
@@ -95,13 +94,13 @@ def download_request(
 
 def download_helper(
     request: pd.core.frame.pandas,
-    filename_spec,
+    filename_spec: list,
     client: cdsapi.Client,
     dry_run: bool = False,
 ) -> str:
     if request.state == "completed":
         try:
-            result = cdsapi.api.Result(client, {"request_id": request.request_id})
+            result = client.client.get_remote(request.request_id)
             result.update()
             filename = build_filename(request, filename_spec)
             if not dry_run:
@@ -109,8 +108,9 @@ def download_helper(
                 return "downloaded"
             else:
                 return request.state
-        except HTTPError:
+        except HTTPError as e:
             print("Request not found")
+            print(e)
             return request.state
     else:
         # No change to state.

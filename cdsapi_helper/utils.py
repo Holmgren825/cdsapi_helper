@@ -93,6 +93,7 @@ def build_filename(request: dict, filename_spec: list) -> str:
     for var in filename_spec:
         part = str_to_list(getattr(request, var))
         part = "_".join(part)
+        part = part.replace("/", "-")
         filename_parts.append(part)
 
     filename = "-".join(filename_parts) + filetype

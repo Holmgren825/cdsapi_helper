@@ -52,7 +52,7 @@ def send_requests(
     df.to_csv(REQUEST_STATUS_CSV)
 
 
-def update_request(dry_run: bool) -> None:
+def update_requests(dry_run: bool) -> None:
     """Update the status of the requests stored in the `cds_requests.csv` file."""
     client = cdsapi.Client(timeout=600, wait_until_complete=False, delete=False)
     try:
@@ -77,7 +77,7 @@ def update_request(dry_run: bool) -> None:
     df.to_csv("./cds_requests.csv")
 
 
-def download_request(
+def download_requests(
     filename_spec: list[str], n_jobs: int = 5, dry_run: bool = False
 ) -> None:
     """Download requests which are marked as completed.

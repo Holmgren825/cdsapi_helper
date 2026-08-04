@@ -76,9 +76,21 @@ def download_era5(variable: str, year: str, month: str, dry_run: bool) -> None:
     type=click.BOOL,
     help="Keep running, waiting for requests to be processed.",
 )
+@click.option(
+    "--queue-limit",
+    "queue_limit",
+    show_default=True,
+    default=3,
+    type=click.INT,
+)
 def download_cds(
-    spec_path: str, n_jobs: int = 5, wait: bool = False, dry_run: bool = False
+    spec_path: str,
+    n_jobs: int = 5,
+    queue_limit: int = 3,
+    wait: bool = False,
+    dry_run: bool = False,
 ) -> None:
+    # TODO: Add docstring.
     click.echo(f"Reading specification: {click.format_filename(spec_path)}")
     with open(spec_path, mode="rb") as fp:
         spec = tomli.load(fp)
@@ -101,20 +113,26 @@ def download_cds(
 
     # Send the request
     send_requests(dataset, requests, queue_limit, dry_run)
-    # # # Update request
+    # Update request
     check_request_again = True
     while check_request_again:
-        # First we try to download, likely in queue.
-        download_request(spec["filename_spec"], n_jobs=n_jobs, dry_run=dry_run)
-        # Then we update the request.
-        update_request(dry_run)
+        # First we update the requests.
+        update_requests(dry_run)
+        # If there is a queue limit, we check if we can send a new request.
+        if queue_limit:
+            send_requests(dataset, requests, queue_limit, dry_run)
+        # Then we try to download, likely in queue.
+        download_requests(spec["filename_spec"], n_jobs=n_jobs, dry_run=dry_run)
+
+        try:
+            df = pd.read_csv("./cds_requests.csv", index_col=0, dtype=str)
+        # This shouldn't happen at this point.
+        except FileNotFoundError as err:
+            raise FileNotFoundError(
+                "File cds_requests.csv does not exist. This should not happen."
+            ) from err
         # How should we wait?
         if wait:
-            try:
-                df = pd.read_csv("./cds_requests.csv", index_col=0, dtype=str)
-            # This shouldn't happen at this point.
-            except FileNotFoundError:
-                print("This shouldn't happen.")
             # Anything in the queue ready for download?
             if (df.state == "completed").any():
                 # Should go back up to download_request.
@@ -129,6 +147,7 @@ def download_cds(
                 click.echo("Requests are running, waiting 30 min.")
                 sleep(60 * 30)
             else:
+                # Everything is done.
                 check_request_again = False
         else:
             check_request_again = False

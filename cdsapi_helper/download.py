@@ -3,6 +3,7 @@ from multiprocessing.pool import ThreadPool
 from typing import Union
 
 import cdsapi
+import click
 import pandas as pd
 from requests.exceptions import HTTPError
 
@@ -68,17 +69,29 @@ def update_request(dry_run: bool) -> None:
 
 
 def download_request(
-    filename_spec: list, n_jobs: int = 5, dry_run: bool = False
+    filename_spec: list[str], n_jobs: int = 5, dry_run: bool = False
 ) -> None:
+    """Download requests which are marked as completed.
+
+    Arguments:
+    ---------
+    filename_spec: list[str]
+        List of parts of request from which to build the filename.
+    n_jobs: int, default=5
+        Number of files to download in parallel.
+    dry_run: bool, default=False
+        For testing purposes. No files are downloaded.
+
+    """
     try:
         df = pd.read_csv("./cds_requests.csv", index_col=0, dtype=str)
-    except FileNotFoundError:
-        return
+    except FileNotFoundError as err:
+        raise FileNotFoundError("`cds_requests.csv not found.") from err
     client = cdsapi.Client(timeout=600, wait_until_complete=False, delete=False)
-    print("Downloading completed requests...")
+    click.echo("Downloading completed requests...")
     # Some parallel downloads.
     download_helper_p = partial(
-        download_helper, filename_spec=filename_spec, client=client, dry_run=dry_run
+        _download_helper, filename_spec=filename_spec, client=client, dry_run=dry_run
     )
     with ThreadPool(processes=n_jobs) as p:
         results = p.map(download_helper_p, df.itertuples())
@@ -89,7 +102,7 @@ def download_request(
     df.to_csv("./cds_requests.csv")
 
 
-def download_helper(
+def _download_helper(
     request: pd.core.frame.pandas,
     filename_spec: list,
     client: cdsapi.Client,

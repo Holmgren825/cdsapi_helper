@@ -8,7 +8,7 @@ import click
 import pandas as pd
 import tomli
 
-from .download import download_request, send_request, update_request
+from .download import download_requests, send_requests, update_requests
 from .utils import build_request
 
 
@@ -100,7 +100,7 @@ def download_cds(
         requests.append(sub_request)
 
     # Send the request
-    send_request(dataset, requests, dry_run)
+    send_requests(dataset, requests, queue_limit, dry_run)
     # # # Update request
     check_request_again = True
     while check_request_again:

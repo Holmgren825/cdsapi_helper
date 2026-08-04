@@ -1,3 +1,4 @@
+import os
 from functools import partial
 from multiprocessing.pool import ThreadPool
 from typing import Union
@@ -9,14 +10,21 @@ from requests.exceptions import HTTPError
 
 from .utils import build_filename, get_json_sem_hash, request_to_df
 
+REQUEST_STATUS_CSV = "./cds_requests.csv"
 
-def send_request(dataset: str, request: Union[dict, list[dict]], dry_run: bool) -> None:
+
+def send_requests(
+    dataset: str, request: Union[dict, list[dict]], queue_limit: int, dry_run: bool
+) -> None:
+    """Send requests to the CDS server."""
     client = cdsapi.Client(wait_until_complete=False, delete=False)
 
-    try:
-        df = pd.read_csv("./cds_requests.csv", index_col=0, dtype=str)
-    except FileNotFoundError:
+    if os.path.exists(REQUEST_STATUS_CSV):
+        df = pd.read_csv(REQUEST_STATUS_CSV, index_col=0, dtype=str)
+        current_online_queue = (~df.state.isin(["downloaded", "completed"])).sum()
+    else:
         df = pd.DataFrame()
+        current_online_queue = 0
 
     if isinstance(request, dict):
         request = [request]
@@ -27,20 +35,21 @@ def send_request(dataset: str, request: Union[dict, list[dict]], dry_run: bool) 
             duplicate = df["request_hash"].isin([req_hash]).any()
         except KeyError:
             duplicate = False
-        if not duplicate:
-            if not dry_run:
-                result = client.retrieve(dataset, req)
-                reply = result.reply
+        if current_online_queue < queue_limit:
+            if not duplicate:
+                if not dry_run:
+                    result = client.retrieve(dataset, req)
+                    reply = result.reply
+                else:
+                    reply = {"state": "test_state", "request_id": "test_id"}
+                r_df = request_to_df(req, reply, req_hash)
+                df = pd.concat([df, r_df])
             else:
-                reply = {"state": "test_state", "request_id": "test_id"}
-            r_df = request_to_df(req, reply, req_hash)
-            df = pd.concat([df, r_df])
-        else:
-            print("Request already sent.")
+                click.echo("Request already submitted.")
 
     # Save it.
     df = df.reset_index(drop=True)
-    df.to_csv("./cds_requests.csv")
+    df.to_csv(REQUEST_STATUS_CSV)
 
 
 def update_request(dry_run: bool) -> None:

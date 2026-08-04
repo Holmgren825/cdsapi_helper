@@ -54,7 +54,7 @@ def update_request(dry_run: bool) -> None:
 
     click.echo("Updating requests...")
     for request in df.itertuples():
-        if request.state not in ("completed", "downloaded", "deleted", "offline_queue"):
+        if request.state not in ("completed", "downloaded", "deleted"):
             try:
                 if not dry_run:
                     result = client.client.get_remote(request.request_id)

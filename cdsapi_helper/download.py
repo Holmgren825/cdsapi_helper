@@ -43,28 +43,25 @@ def send_request(dataset: str, request: Union[dict, list[dict]], dry_run: bool) 
 
 
 def update_request(dry_run: bool) -> None:
+    """Update the status of the requests stored in the `cds_requests.csv` file."""
     client = cdsapi.Client(timeout=600, wait_until_complete=False, delete=False)
     try:
         df = pd.read_csv("./cds_requests.csv", index_col=0, dtype=str)
     except FileNotFoundError:
-        print("Nothing to update.")
+        click.echo("Nothing to update.")
         return
 
-    print("Updating requests...")
+    click.echo("Updating requests...")
     for request in df.itertuples():
-        if (
-            request.state != "completed"
-            and request.state != "downloaded"
-            and request.state != "deleted"
-        ):
+        if request.state not in ("completed", "downloaded", "deleted", "offline_queue"):
             try:
                 if not dry_run:
                     result = client.client.get_remote(request.request_id)
                     result.update()
                     df.at[request.Index, "state"] = result.reply["state"]
             except HTTPError as err:
-                print(f"Request {request.Index} not found")
-                print(err)
+                click.echo(f"Request {request.Index} not found")
+                click.echo(err)
                 df.at[request.Index, "state"] = "deleted"
 
     df.to_csv("./cds_requests.csv")

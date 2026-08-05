@@ -40,6 +40,7 @@ def send_requests(
                 if not dry_run:
                     result = client.retrieve(dataset, req)
                     reply = result.reply
+                    current_online_queue += 1
                 else:
                     reply = {"state": "test_state", "request_id": "test_id"}
                 r_df = request_to_df(req, reply, req_hash)
